@@ -1,0 +1,96 @@
+<section>
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+        <h2 class="text-3xl font-bold text-gray-800 dark:text-white border-b-4 border-indigo-500 inline-block pb-2">
+            {{ calendar.month_title if calendar else 'Academic Calendar' }}
+        </h2>
+        
+        {% if nav %}
+        <div class="flex space-x-3 mt-4 md:mt-0">
+            <button class="calendar-nav-btn px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
+                    data-date="{{ nav.prev }}">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                Prev
+            </button>
+            <button class="calendar-nav-btn px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center"
+                    data-date="{{ nav.next }}">
+                Next
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if calendar and calendar.days %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+            {% for day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+            <div class="py-3 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {{ day }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="grid grid-cols-7 auto-rows-fr bg-gray-200 dark:bg-gray-600 gap-px border-b border-gray-200 dark:border-gray-600">
+            {% for day_obj in calendar.days %}
+                {# Define colors based on aggregated status #}
+                {% if day_obj.status == 'exam' %}
+                    {# Orange for Exams #}
+                    {% set cell_bg = "bg-orange-100 dark:bg-orange-900/40" %}
+                    {% set text_cls = "text-orange-800 dark:text-orange-200" %}
+                    {% set date_cls = "text-orange-600 dark:text-orange-300/70" %}
+
+                {% elif day_obj.status == 'working' %}
+                    {# Green #}
+                    {% set cell_bg = "bg-green-100 dark:bg-green-900/40" %}
+                    {% set text_cls = "text-green-800 dark:text-green-200" %}
+                    {% set date_cls = "text-green-600 dark:text-green-300/70" %}
+                
+                {% elif day_obj.status == 'day_order' %}
+                    {# Yellow #}
+                    {% set cell_bg = "bg-yellow-100 dark:bg-yellow-900/40" %}
+                    {% set text_cls = "text-yellow-800 dark:text-yellow-200" %}
+                    {% set date_cls = "text-yellow-600 dark:text-yellow-300/70" %}
+
+                {% elif day_obj.status == 'holiday' %}
+                    {# Red #}
+                    {% set cell_bg = "bg-red-100 dark:bg-red-900/40" %}
+                    {% set text_cls = "text-red-800 dark:text-red-200" %}
+                    {% set date_cls = "text-red-600 dark:text-red-300/70" %}
+
+                {% else %}
+                    {# Default/Padding #}
+                    {% set cell_bg = "bg-white dark:bg-gray-800" %}
+                    {% set text_cls = "text-gray-600 dark:text-gray-400" %}
+                    {% set date_cls = "text-gray-400 dark:text-gray-600" %}
+                {% endif %}
+                
+                {% if not day_obj.day %}
+                    {# Empty padding cell #}
+                    <div class="bg-gray-50/50 dark:bg-gray-800/50 min-h-[100px]"></div>
+                {% else %}
+                    <div class="{{ cell_bg }} min-h-[100px] p-2 relative transition-colors flex flex-col justify-between hover:brightness-95 dark:hover:brightness-110">
+                        <span class="absolute top-2 left-2 text-sm font-bold {{ date_cls }}">
+                            {{ day_obj.day }}
+                        </span>
+                        
+                        <div class="mt-6 flex-1 flex flex-col items-center justify-center space-y-1">
+                            {% for event in day_obj.events %}
+                                <p class="text-[10px] font-bold text-center leading-tight {{ text_cls }}">
+                                    {{ event.text }}
+                                </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <div class="inline-block p-4 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 mb-3">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+        </div>
+        <p class="text-gray-500 dark:text-gray-400 text-lg">Calendar data not available for this month.</p>
+    </div>
+    {% endif %}
+</section>

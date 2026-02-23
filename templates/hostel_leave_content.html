@@ -1,0 +1,74 @@
+{% if leaves %}
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <tr>
+                    <th scope="col" class="px-6 py-3">Leave ID</th>
+                    <th scope="col" class="px-6 py-3">Type</th>
+                    <th scope="col" class="px-6 py-3">Dates</th>
+                    <th scope="col" class="px-6 py-3">Place & Reason</th>
+                    <th scope="col" class="px-6 py-3">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leave in leaves %}
+                <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                        {{ leave.id }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300">
+                            {{ leave.type }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-xs">
+                            <div class="text-gray-900 dark:text-white">From: {{ leave.from_date }}</div>
+                            <div class="text-gray-500">To: {{ leave.to_date }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-gray-900 dark:text-white font-medium">{{ leave.place }}</div>
+                        <div class="text-xs text-gray-500">{{ leave.reason }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if leave.color == 'green' %}
+                        <span class="inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-green-900 dark:text-green-300">
+                            <span class="w-2 h-2 mr-1 bg-green-500 rounded-full"></span>
+                            {{ leave.status }}
+                        </span>
+                        {% elif leave.color == 'yellow' %}
+                        <span class="inline-flex items-center bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-yellow-900 dark:text-yellow-300">
+                            <span class="w-2 h-2 mr-1 bg-yellow-500 rounded-full animate-pulse"></span>
+                            {{ leave.status }}
+                        </span>
+                        {% elif leave.color == 'red' %}
+                        <span class="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+                            <span class="w-2 h-2 mr-1 bg-red-500 rounded-full"></span>
+                            {{ leave.status }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-gray-300">
+                            {{ leave.status }}
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+    <div class="h-16 w-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+        <i data-lucide="coffee" class="h-8 w-8 text-gray-400"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white">No Leave Requests</h3>
+    <p class="text-gray-500 dark:text-gray-400 max-w-sm mt-2">You haven't applied for any leave yet, or the records are empty.</p>
+</div>
+<script>
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+</script>
+{% endif %}

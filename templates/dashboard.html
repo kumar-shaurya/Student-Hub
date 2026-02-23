@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="Hh2FfBaeUJfNsm2wMHU2LxQkJN5k0Thx0DMSVjsMvow" />
+    <title>VtopC</title>
+    <meta name="description"
+        content="Your personal VTOP Dashboard. Manage academics, check exam schedules, and calculate attendance targets effortlessly.">
+
+    <meta property="og:title" content="My VtopC Dashboard">
+    <meta property="og:site_name" content="VtopC">
+    <meta property="og:description" content="Manage your VTOP academics with a modern interface.">
+    <meta property="og:image" content="{{ url_for('static', filename='icon-512.png') }}">
+
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
+    <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Simple system font stack for offline usage if Google Fonts fail */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
+        .dark table {
+            color: #e5e7eb !important;
+            border-color: #374151 !important;
+        }
+
+        .dark table td,
+        .dark table th {
+            border-color: #374151 !important;
+            background-color: transparent !important;
+        }
+
+        .dark table tr:nth-child(even) {
+            background-color: rgba(55, 65, 81, 0.3) !important;
+        }
+
+        .nav-link-child.active-subsection {
+            font-weight: 600;
+            color: #4f46e5;
+            background-color: #eef2ff;
+        }
+
+        .dark .nav-link-child.active-subsection {
+            color: #818cf8;
+            background-color: #374151;
+        }
+
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='lucide.js') }}"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+
+<body
+    class="flex h-[100dvh] overflow-hidden bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-200">
+
+    <div id="sidebar-overlay"
+        class="fixed inset-0 bg-black/50 z-20 hidden transition-opacity duration-300 opacity-0 md:hidden backdrop-blur-sm">
+    </div>
+
+    <aside id="sidebar"
+        class="sidebar w-64 fixed inset-y-0 left-0 z-30 overflow-y-auto shadow-xl md:relative md:translate-x-0 transform -translate-x-full bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700 transition-colors duration-200 flex flex-col">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <h1 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">VTOP Client</h1>
+            
+            <a href="#" class="nav-link mt-6 flex items-center p-2 -mx-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" data-section="profile">
+                <div class="h-12 w-12 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold text-xl">
+                    U
+                </div>
+                <div class="ml-3 overflow-hidden text-left">
+                    <p id="sidebar-username" class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                        Loading...
+                    </p>
+                    <p id="sidebar-regno" class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Session Active
+                    </p>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
+            <a href="#"
+                class="nav-link active flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                data-section="dashboard">
+                <i data-lucide="layout-dashboard" class="mr-3 h-5 w-5"></i> Dashboard
+            </a>
+
+            <div x-data="{ open: false }" class="space-y-1">
+                <button @click="open = !open"
+                    class="nav-link w-full flex justify-between items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                    data-section="academics">
+                    <div class="flex items-center"><i data-lucide="graduation-cap" class="mr-3 h-5 w-5"></i> Academics
+                    </div>
+                    <i data-lucide="chevron-down" class="h-4 w-4 transition-transform duration-200"
+                        :class="{'rotate-180': open}"></i>
+                </button>
+                <div x-show="open" class="pl-11 space-y-1">
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="academics" data-subsection="academics-courses">Registered Courses</a>
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="academics" data-subsection="academics-timetable">Time Table</a>
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="academics" data-subsection="academics-attendance">Attendance</a>
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="academics" data-subsection="academics-calendar">Calendar</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: false }" class="space-y-1">
+                <button @click="open = !open"
+                    class="nav-link w-full flex justify-between items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                    data-section="examinations">
+                    <div class="flex items-center"><i data-lucide="file-text" class="mr-3 h-5 w-5"></i> Examinations
+                    </div>
+                    <i data-lucide="chevron-down" class="h-4 w-4 transition-transform duration-200"
+                        :class="{'rotate-180': open}"></i>
+                </button>
+                <div x-show="open" class="pl-11 space-y-1">
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="examinations" data-subsection="examinations-marks">Marks</a>
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="examinations" data-subsection="examinations-schedule">Exam Schedule</a>
+                </div>
+            </div>
+
+            <div x-data="{ open: false }" class="space-y-1">
+                <button @click="open = !open"
+                    class="w-full flex justify-between items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors">
+                    <div class="flex items-center"><i data-lucide="home" class="mr-3 h-5 w-5"></i> Hostel
+                    </div>
+                    <i data-lucide="chevron-down" class="h-4 w-4 transition-transform duration-200"
+                        :class="{'rotate-180': open}"></i>
+                </button>
+                <div x-show="open" class="pl-11 space-y-1">
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="hostel" data-subsection="hostel-my-room">My Room</a>
+                </div>
+            </div>
+
+            <a href="#"
+                class="nav-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                data-section="notes-forum">
+                <i data-lucide="message-square" class="mr-3 h-5 w-5"></i> Notes Forum
+            </a>
+
+            <a href="#"
+                class="nav-link flex items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                data-section="find-people">
+                <i data-lucide="users" class="mr-3 h-5 w-5"></i> Find People
+            </a>
+
+            <div x-data="{ open: false }" class="space-y-1 mt-4 border-t border-gray-100 dark:border-gray-700 pt-2">
+                <button @click="open = !open"
+                    class="nav-link w-full flex justify-between items-center px-4 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                    data-section="extra">
+                    <div class="flex items-center"><i data-lucide="plus-circle" class="mr-3 h-5 w-5"></i> Extra Options
+                    </div>
+                    <i data-lucide="chevron-down" class="h-4 w-4 transition-transform duration-200"
+                        :class="{'rotate-180': open}"></i>
+                </button>
+                <div x-show="open" class="pl-11 space-y-1">
+                    <a href="#"
+                        class="nav-link-child block px-3 py-2 text-xs font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors"
+                        data-parent="extra" data-subsection="extra-calculator">Attendance Calculator</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div class="mb-4">
+                <label for="semester-select"
+                    class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wider">Semester</label>
+                <select id="semester-select"
+                    class="block w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-indigo-500 dark:focus:border-indigo-500 transition-colors">
+                    <option>Loading...</option>
+                </select>
+            </div>
+            <a href="#" id="logoutBtn"
+                class="flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors w-full">
+                <i data-lucide="log-out" class="mr-2 h-4 w-4"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
+        <header
+            class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700 transition-colors duration-200">
+            <div class="flex items-center">
+                <button id="menu-toggle"
+                    class="md:hidden mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                    <i data-lucide="menu" class="h-6 w-6"></i>
+                </button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="theme-toggle"
+                    class="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors focus:outline-none">
+                    <i data-lucide="sun" class="h-5 w-5 hidden dark:block"></i>
+                    <i data-lucide="moon" class="h-5 w-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="content" class="flex-1 p-6 lg:p-8 overflow-y-auto scroll-smooth pb-24">
+
+            <div id="dashboard" class="page-section">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Dashboard</h2>
+                    <span class="text-sm text-gray-500 dark:text-gray-400 font-medium" id="current-date-display"></span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-fit">
+                        <h3 class="font-bold text-gray-800 dark:text-white text-lg mb-5 flex items-center"><i
+                                data-lucide="activity" class="h-5 w-5 mr-2 text-indigo-500"></i> Snapshot</h3>
+                        <div class="space-y-5 flex-1">
+                            <div>
+                                <div class="flex justify-between text-sm font-medium mb-1.5"><span
+                                        class="text-gray-500 dark:text-gray-400">Attendance</span><span
+                                        id="snapshot-attendance-perc" class="text-gray-900 dark:text-white">...</span>
+                                </div>
+                                <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                                    <div id="snapshot-attendance-bar"
+                                        class="bg-yellow-500 h-2 rounded-full transition-all duration-500"
+                                        style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm font-medium mb-1.5"><span
+                                        class="text-gray-500 dark:text-gray-400">On Duty</span><span
+                                        id="snapshot-od-count" class="text-gray-900 dark:text-white">...</span></div>
+                                <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                                    <div id="snapshot-od-bar"
+                                        class="bg-purple-500 h-2 rounded-full transition-all duration-500"
+                                        style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 md:col-span-2 flex flex-col h-full min-h-[320px]">
+                        <div class="flex justify-between items-center mb-5">
+                            <h3 class="font-bold text-gray-800 dark:text-white text-lg flex items-center"><i
+                                    data-lucide="calendar-days" class="h-5 w-5 mr-2 text-indigo-500"></i> Today's
+                                Schedule</h3>
+                            <span
+                                class="text-xs font-medium px-2.5 py-1 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-md border border-indigo-100 dark:border-indigo-800">Live</span>
+                        </div>
+                        <div id="today-schedule-container"
+                            class="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">Loading schedule...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="academics" class="hidden page-section">
+                <div id="academics-courses" class="academics-subsection">
+                    <div id="courses-container"></div>
+                </div>
+                <div id="academics-timetable" class="hidden academics-subsection">
+                    <div id="timetable-container"></div>
+                </div>
+                <div id="academics-attendance" class="hidden academics-subsection">
+                    <div id="attendance-container"></div>
+                </div>
+                <div id="academics-calendar" class="hidden academics-subsection">
+                    <div id="calendar-container"></div>
+                </div>
+            </div>
+
+            <div id="examinations" class="hidden page-section">
+                <div id="examinations-marks" class="examinations-subsection">
+                    <div id="marks-container"></div>
+                </div>
+                <div id="examinations-schedule" class="hidden examinations-subsection">
+                    <div id="exam-schedule-container"></div>
+                </div>
+            </div>
+
+            <div id="extra" class="hidden page-section">
+                <div id="extra-calculator" class="extra-subsection"></div>
+            </div>
+
+            <div id="hostel" class="hidden page-section">
+                <div id="hostel-my-room" class="hostel-subsection">
+                    
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">My Room</h2>
+                        <button class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center shadow-sm">
+                            <i data-lucide="message-square-plus" class="h-4 w-4 mr-2"></i> Chat Room
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center text-center">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 flex items-center"><i data-lucide="door-open" class="w-3 h-3 mr-1"></i> Room No</span>
+                            <span id="ui-room-no" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">...</span>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center text-center">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 flex items-center"><i data-lucide="building" class="w-3 h-3 mr-1"></i> Block</span>
+                            <span id="ui-room-block" class="text-2xl font-black text-indigo-600 dark:text-indigo-400">...</span>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center text-center">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 flex items-center"><i data-lucide="bed" class="w-3 h-3 mr-1"></i> Type</span>
+                            <span id="ui-room-type" class="text-lg font-bold text-gray-800 dark:text-gray-200 mt-1">...</span>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-center items-center text-center">
+                            <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 flex items-center"><i data-lucide="utensils" class="w-3 h-3 mr-1"></i> Mess</span>
+                            <span id="ui-room-mess" class="text-lg font-bold text-gray-800 dark:text-gray-200 mt-1">...</span>
+                        </div>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4 flex items-center">
+                        <i data-lucide="users" class="h-5 w-5 mr-2 text-indigo-500"></i> Roommates
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8" id="roommates-container">
+                        <div class="p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 text-sm text-gray-500">Loading roommates...</div>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+                            <i data-lucide="calendar" class="h-5 w-5 mr-2 text-indigo-500"></i> Class Timetable (Busy Status)
+                        </h3>
+                        
+                        <div class="flex items-center space-x-3 text-[10px] font-medium text-gray-500 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <span class="flex items-center"><div class="w-3 h-3 rounded bg-indigo-500 mr-1.5"></div> You</span>
+                            <span class="flex items-center"><div class="w-3 h-3 rounded bg-blue-500 mr-1.5"></div> Aarav</span>
+                            <span class="flex items-center"><div class="w-3 h-3 rounded bg-emerald-500 mr-1.5"></div> Rohan</span>
+                            <span class="flex items-center"><div class="w-3 h-3 rounded bg-amber-500 mr-1.5"></div> Kabir</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-6">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-sm text-left border-collapse">
+                                <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 font-medium border-b border-gray-200 dark:border-gray-700 text-[10px]">
+                                    <tr>
+                                        <th class="px-3 py-2 whitespace-nowrap border-r border-gray-200 dark:border-gray-700 sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left">Day</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">08:00</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">08:55</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">09:50</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">10:45</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">11:40</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">12:35</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/50">
+                                            <svg class="w-3 h-3 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+                                        </th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">14:00</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">14:55</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">15:50</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">16:45</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center border-r border-gray-200 dark:border-gray-700 font-mono">17:40</th>
+                                        <th class="px-2 py-2 whitespace-nowrap text-center font-mono">18:35</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="room-timetable-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="notes-forum" class="hidden page-section">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Notes Forum</h2>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <p class="text-gray-500 dark:text-gray-400">Notes sharing board coming soon.</p>
+                </div>
+            </div>
+
+            <div id="find-people" class="hidden page-section">
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6">Find People</h2>
+                <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <p class="text-gray-500 dark:text-gray-400">Student connection interface coming soon.</p>
+                </div>
+            </div>
+
+            <div id="profile" class="hidden page-section">
+                <div id="profile-container"></div>
+            </div>
+        </div>
+    </main>
+
+    <div id="detail-modal"
+        class="modal fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 hidden opacity-0">
+        <div
+            class="modal-content bg-white dark:bg-gray-800 w-full max-w-2xl rounded-2xl shadow-2xl transform scale-95 opacity-0 border border-gray-200 dark:border-gray-700 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 id="modal-title" class="text-lg font-bold text-gray-900 dark:text-white">Details</h3>
+                <button id="modal-close-btn"
+                    class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-200 rounded-lg p-1.5 transition-colors"><i
+                        data-lucide="x" class="h-5 w-5"></i></button>
+            </div>
+            <div id="modal-body" class="p-0 overflow-y-auto">
+                <div class="p-5 text-gray-500 dark:text-gray-400">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='alpine.js') }}" defer></script>
+    <script>
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date-display').textContent = new Date().toLocaleDateString('en-US', dateOptions);
+    </script>
+    <script src="{{ url_for('static', filename='calculator.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='dashboard.js') }}?v=8"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker
+                .register('/sw.js') // Root scope
+                .then(() => { console.log('Service Worker Registered'); });
+        }
+    </script>
+</body>
+
+</html>
