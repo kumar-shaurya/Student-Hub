@@ -5,6 +5,7 @@ import * as Data from './modules/data_service.js';
 import * as RoomManager from './modules/room_manager.js';
 import * as RoomieMatch from './modules/roomie_match.js';
 import * as NotesForum from './modules/notes_forum.js';
+import * as TaskManager from './modules/task_manager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Dashboard module loaded.");
@@ -174,6 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             else if (section === 'notes-forum') {
                 NotesForum.initNotesForum();
+            }
+            else if (section === 'task-hub') {
+                TaskManager.initTaskManager();
             }
 
             closeSidebar();
