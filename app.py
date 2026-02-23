@@ -36,8 +36,15 @@ def index():
         'messagingSenderId': os.environ.get('FIREBASE_MESSAGING_SENDER_ID'),
         'appId': os.environ.get('FIREBASE_APP_ID')
     }
+    
+    # Package the Supabase config from environment variables
+    supabase_config = {
+        'url': os.environ.get('SUPABASE_URL'),
+        'anonKey': os.environ.get('SUPABASE_ANON_KEY')
+    }
+    
     # Pass it to the template
-    return render_template('dashboard.html', firebase_config=firebase_config)
+    return render_template('dashboard.html', firebase_config=firebase_config, supabase_config=supabase_config)
 
 @app.route('/login')
 def login():

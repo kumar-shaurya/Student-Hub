@@ -4,6 +4,7 @@ import * as UI from './modules/ui.js';
 import * as Data from './modules/data_service.js';
 import * as RoomManager from './modules/room_manager.js';
 import * as RoomieMatch from './modules/roomie_match.js';
+import * as NotesForum from './modules/notes_forum.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Dashboard module loaded.");
@@ -170,6 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (section === 'profile') Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
 
             else if (section === 'find-people') RoomieMatch.initRoomieMatch();
+
+            else if (section === 'notes-forum') {
+                NotesForum.initNotesForum();
+            }
 
             closeSidebar();
             elements.contentContainer.scrollTop = 0;
