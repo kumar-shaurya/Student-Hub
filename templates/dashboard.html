@@ -474,6 +474,10 @@
         </div>
     </div>
 
+    <script>
+        // @ts-ignore
+        window.FIREBASE_CONFIG = {{ firebase_config | tojson | safe }};
+    </script>
     <script src="{{ url_for('static', filename='alpine.js') }}" defer></script>
     <script>
         const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
