@@ -3,6 +3,7 @@ import { state } from './modules/state.js';
 import * as UI from './modules/ui.js';
 import * as Data from './modules/data_service.js';
 import * as RoomManager from './modules/room_manager.js';
+import * as RoomieMatch from './modules/roomie_match.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Dashboard module loaded.");
@@ -167,6 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const section = link.dataset.section;
             if (section === 'enrollment') Data.fetchAndDisplay(TARGETS.ENROLLMENT, elements.enrollment, "Course Enrollment");
             else if (section === 'profile') Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
+
+            else if (section === 'find-people') RoomieMatch.initRoomieMatch();
 
             closeSidebar();
             elements.contentContainer.scrollTop = 0;
