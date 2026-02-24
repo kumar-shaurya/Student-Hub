@@ -4,3 +4,7 @@ requests
 beautifulsoup4
 gunicorn
 whitenoise
+supabase
+python-dotenv
+PyJWT
+python-dotenv

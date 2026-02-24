@@ -4,47 +4,47 @@
 const QUESTIONS = [
     {
         key: 'sleep_time', type: 'options', step: 'Question 1 of 5',
-        text: 'When do you usually go to sleep? 😴', hint: 'Pick the time that best matches your night',
+        text: 'When do you usually go to sleep?', hint: 'Pick the time that best matches your night',
         options: [
-            { value: 22, icon: '🌆', label: 'Early bird',  sub: 'Before 10 PM' },
-            { value: 23, icon: '🌙', label: 'Night owl',   sub: '10 PM – Midnight' },
-            { value: 1,  icon: '🦉', label: 'Late night',  sub: 'Midnight – 2 AM' },
-            { value: 3,  icon: '🌌', label: 'All-nighter', sub: 'After 2 AM' }
+            { value: 22, label: 'Early bird',  sub: 'Before 10 PM' },
+            { value: 23, label: 'Night owl',   sub: '10 PM – Midnight' },
+            { value: 1,  label: 'Late night',  sub: 'Midnight – 2 AM' },
+            { value: 3,  label: 'All-nighter', sub: 'After 2 AM' }
         ]
     },
     {
         key: 'cleanliness', type: 'options', step: 'Question 2 of 5',
-        text: 'How tidy do you keep your space? 🧹', hint: 'Be honest — no judgment!',
+        text: 'How tidy do you keep your space?', hint: 'Be honest — no judgment!',
         options: [
-            { value: 5, icon: '✨', label: 'Spotless',         sub: 'Everything must be in its place' },
-            { value: 4, icon: '🙂', label: 'Pretty clean',     sub: 'Tidy up regularly' },
-            { value: 3, icon: '😅', label: 'Middle ground',    sub: 'Clean when needed' },
-            { value: 1, icon: '🌪️', label: 'Organised chaos',  sub: 'I know where everything is!' }
+            { value: 5, label: 'Spotless',         sub: 'Everything must be in its place' },
+            { value: 4, label: 'Pretty clean',     sub: 'Tidy up regularly' },
+            { value: 3, label: 'Middle ground',    sub: 'Clean when needed' },
+            { value: 1, label: 'Organised chaos',  sub: 'I know where everything is!' }
         ]
     },
     {
         key: 'study_style', type: 'options', step: 'Question 3 of 5',
-        text: 'When do you prefer to study? 📚', hint: 'This affects schedule & noise compatibility',
+        text: 'When do you prefer to study?', hint: 'This affects schedule & noise compatibility',
         options: [
-            { value: 'day',   icon: '☀️', label: 'Daytime',    sub: 'Morning to afternoon' },
-            { value: 'night', icon: '🌙', label: 'Night time', sub: 'Evening to midnight' }
+            { value: 'day',   label: 'Daytime',    sub: 'Morning to afternoon' },
+            { value: 'night', label: 'Night time', sub: 'Evening to midnight' }
         ]
     },
     {
         key: 'noise_tolerance', type: 'options', step: 'Question 4 of 5',
-        text: 'How much noise can you handle at home? 🔊', hint: 'Think music, calls, TV in the background',
+        text: 'How much noise can you handle at home?', hint: 'Think music, calls, TV in the background',
         options: [
-            { value: 5, icon: '🎶', label: 'Love the noise', sub: 'Music, chatter — bring it on' },
-            { value: 3, icon: '🎧', label: 'Some is fine',   sub: 'Moderate noise is okay' },
-            { value: 1, icon: '🤫', label: 'Peace & quiet',  sub: 'I need silence to focus' }
+            { value: 5, label: 'Love the noise', sub: 'Music, chatter — bring it on' },
+            { value: 3, label: 'Some is fine',   sub: 'Moderate noise is okay' },
+            { value: 1, label: 'Peace & quiet',  sub: 'I need silence to focus' }
         ]
     },
     {
         key: 'food_type', type: 'options', step: 'Question 5 of 5',
-        text: 'What is your food preference? 🍽️', hint: 'Matters for shared kitchen comfort',
+        text: 'What is your food preference?', hint: 'Matters for shared kitchen comfort',
         options: [
-            { value: 'veg',     icon: '🥦', label: 'Vegetarian', sub: 'No meat in my kitchen please' },
-            { value: 'non-veg', icon: '🍗', label: 'Non-Veg',    sub: 'I eat everything' }
+            { value: 'veg',     label: 'Vegetarian', sub: 'No meat in my kitchen please' },
+            { value: 'non-veg', label: 'Non-Veg',    sub: 'I eat everything' }
         ]
     }
 ];
@@ -205,7 +205,6 @@ function buildQuiz() {
         
         bodyHtml += `
             <button class="opt-btn flex items-center gap-4 p-4 border-2 rounded-xl text-left transition-all ${activeClasses}" data-idx="${idx}">
-                <span class="text-2xl w-10 text-center flex-shrink-0">${opt.icon}</span>
                 <div class="flex flex-col">
                     <span class="font-bold text-base">${opt.label}</span>
                     <span class="text-xs font-medium mt-0.5 ${isSelected ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}">${opt.sub}</span>
@@ -369,14 +368,14 @@ function showResults() {
     const noiseLabel = { 5:'Loves noise', 3:'Some noise OK', 1:'Needs quiet' };
 
     const profileChips = [
-        `😴 ${sleepLabel[user.sleep_time] || user.sleep_time}`,
-        `🧹 ${cleanLabel[user.cleanliness] || user.cleanliness}`,
-        user.study_style === 'day' ? '☀️ Day studier' : '🌙 Night studier',
-        `🔊 ${noiseLabel[user.noise_tolerance] || user.noise_tolerance}`,
-        user.food_type === 'veg' ? '🥦 Vegetarian' : '🍗 Non-Veg'
+        `${sleepLabel[user.sleep_time] || user.sleep_time}`,
+        `${cleanLabel[user.cleanliness] || user.cleanliness}`,
+        user.study_style === 'day' ? 'Day studier' : 'Night studier',
+        `${noiseLabel[user.noise_tolerance] || user.noise_tolerance}`,
+        user.food_type === 'veg' ? 'Vegetarian' : 'Non-Veg'
     ].map(c => `<span class="px-3 py-1.5 bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 font-bold text-xs rounded-full border border-indigo-100 dark:border-indigo-900 shadow-sm whitespace-nowrap">${c}</span>`).join('');
 
-    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+    const medals = ['1.', '2.', '3.', '4.', '5.'];
 
     let cardsHtml = '';
     
@@ -400,7 +399,7 @@ function showResults() {
             
             cardsHtml += `
                 <div class="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-sm mb-3 hover:-translate-y-1 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all">
-                    <div class="w-12 h-12 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-2xl flex-shrink-0">${medals[i] || '⭐'}</div>
+                    <div class="w-12 h-12 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 text-gray-700 dark:text-gray-300">${medals[i] || '-'}</div>
                     <div class="flex-1 overflow-hidden">
                         <div class="flex items-baseline gap-2">
                             <h4 class="text-base font-bold text-gray-900 dark:text-white truncate">${m.name}</h4>
@@ -420,7 +419,6 @@ function showResults() {
     
     document.getElementById('roomie-match-app').innerHTML = `
         <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 p-6 rounded-2xl mb-6 text-center">
-            <span class="text-4xl block mb-2">🎉</span>
             <h2 class="text-xl font-black text-indigo-900 dark:text-indigo-300">Hey ${safeName}, here are your top matches!</h2>
             <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400/80 mt-1">Based on everyone in the database</p>
             <div class="flex flex-wrap justify-center gap-2 mt-5">${profileChips}</div>

@@ -10,6 +10,7 @@ load_dotenv()
 # Import blueprints
 from auth import auth_bp
 from data_routes import data_bp
+from chat_routes import chat_bp
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app)
@@ -23,11 +24,12 @@ app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/', prefix='static/')
 # Register blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
+app.register_blueprint(chat_bp)
 
 @app.route('/')
+@app.route('/dashboard')
 def index():
     """Serves the main dashboard page."""
-    # Package the Firebase config from environment variables
     firebase_config = {
         'apiKey': os.environ.get('FIREBASE_API_KEY'),
         'authDomain': os.environ.get('FIREBASE_AUTH_DOMAIN'),
@@ -37,14 +39,17 @@ def index():
         'appId': os.environ.get('FIREBASE_APP_ID')
     }
     
-    # Package the Supabase config from environment variables
     supabase_config = {
-        'url': os.environ.get('SUPABASE_URL'),
-        'anonKey': os.environ.get('SUPABASE_ANON_KEY')
+        'url': os.environ.get('SUPABASE_URL', ''),
+        'anonKey': os.environ.get('SUPABASE_ANON_KEY', '')
     }
     
-    # Pass it to the template
-    return render_template('dashboard.html', firebase_config=firebase_config, supabase_config=supabase_config)
+    return render_template('dashboard.html', 
+        firebase_config=firebase_config, 
+        supabase_config=supabase_config,
+        supabase_url=os.environ.get('SUPABASE_URL', ''),
+        supabase_key=os.environ.get('SUPABASE_KEY', '')
+    )
 
 @app.route('/login')
 def login():
@@ -54,6 +59,8 @@ def login():
 @app.route('/sw.js')
 def service_worker():
     response = send_from_directory('static', 'sw.js', mimetype='application/javascript')
+    # Force browser to never cache the Service Worker
+    # This ensures the browser always checks for the latest version
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -61,5 +68,4 @@ def service_worker():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    # Add debug=True to enable the auto-reloader
     app.run(host='0.0.0.0', port=port)

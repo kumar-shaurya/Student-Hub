@@ -1,6 +1,6 @@
 {
-  "name": "Vtop but Cooler",
-  "short_name": "VtopC",
+  "name": "Student-Hub",
+  "short_name": "Student-Hub",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

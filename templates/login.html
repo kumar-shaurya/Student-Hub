@@ -4,20 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="google-site-verification" content="Hh2FfBaeUJfNsm2wMHU2LxQkJN5k0Thx0DMSVjsMvow" />
-    <title>VTOPC - Login</title>
-    <meta name="description" content="VtopC is a modern, fast, and responsive client for VTOP Student Portal for Chennai Campus. Access your attendance, marks, timetable, and calculate attendance requirements with a better UI/UX.">
-    <meta name="keywords" content="VTOPC, VTOPC Login, Vellore Institute of Technology Chennai, Student Portal, Attendance Calculator, VtopC, Timetable, Better Vtop">
-    <meta name="author" content="VtopC Team">
+    <title>Student-Hub - Login</title>
+    <meta name="description" content="Student-Hub is a modern, fast, and responsive client for Student-Hub Student Portal for Chennai Campus. Access your attendance, marks, timetable, and calculate attendance requirements with a better UI/UX.">
+    <meta name="keywords" content="Student-Hub, Student-Hub Login, Vellore Institute of Technology Chennai, Student Portal, Attendance Calculator, Student-Hub, Timetable, Better Student-Hub">
+    <meta name="author" content="Student-Hub Team">
     <meta name="robots" content="index, follow">
 
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://vtopc.onrender.com/"> <meta property="og:title" content="VtopC - The Better VTOP Experience">
-    <meta property="og:description" content="A faster, cleaner way to check your VTOP attendance, marks, and schedule. Includes a built-in attendance calculator.">
+    <meta property="og:url" content="https://student-hub.onrender.com/"> <meta property="og:title" content="Student-Hub - The Better Student-Hub Experience">
+    <meta property="og:description" content="A faster, cleaner way to check your Student-Hub attendance, marks, and schedule. Includes a built-in attendance calculator.">
     <meta property="og:image" content="{{ url_for('static', filename='icon-512.png') }}">
 
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://vtopc.onrender.com/"> <meta property="twitter:title" content="VtopC - VTOP but Cooler">
-    <meta property="twitter:description" content="Login to VtopC for a modern dashboard, dark mode, and instant attendance insights.">
+    <meta property="twitter:url" content="https://student-hub.onrender.com/"> <meta property="twitter:title" content="Student-Hub - Student-Hub but Cooler">
+    <meta property="twitter:description" content="Login to Student-Hub for a modern dashboard, dark mode, and instant attendance insights.">
     <meta property="twitter:image" content="{{ url_for('static', filename='icon-512.png') }}">
     
     <meta name="theme-color" content="#4f46e5">
@@ -25,16 +25,13 @@
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     
-    <!-- LOCAL TAILWIND -->
     <script src="{{ url_for('static', filename='tailwind.js') }}"></script>
     <script>
         tailwind.config = { darkMode: 'media' } 
     </script>
     
-    <!-- LOCAL LUCIDE ICONS (Replaces FontAwesome) -->
     <script src="{{ url_for('static', filename='lucide.js') }}"></script>
 
-    <!-- Google Fonts (Optional fallback) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,7 +48,7 @@
         </div>
 
         <div id="loginContainer" class="hidden w-full max-w-md mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300">
-            <h1 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">VTOP Login</h1>
+            <h1 class="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">Student-Hub Login</h1>
             <p class="text-center text-gray-500 dark:text-gray-400 mb-8">Enter your credentials to begin.</p>
             
             <form id="loginForm" class="space-y-6">
@@ -74,7 +71,6 @@
                         <input type="password" id="password" name="password" required class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors" placeholder="Your Password">
                         
                         <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none">
-                            <!-- Toggling logic swaps hidden class -->
                             <i data-lucide="eye" id="icon-eye" class="w-5 h-5"></i>
                             <i data-lucide="eye-off" id="icon-eye-off" class="w-5 h-5 hidden"></i>
                         </button>
@@ -106,6 +102,4 @@
         if(typeof lucide !== 'undefined') lucide.createIcons();
     </script>
 </body>
-
 </html>
-

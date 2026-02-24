@@ -2,44 +2,32 @@ import { API_BASE_URL, TARGETS } from './modules/constants.js';
 import { state } from './modules/state.js';
 import * as UI from './modules/ui.js';
 import * as Data from './modules/data_service.js';
-import * as RoomManager from './modules/room_manager.js';
-import * as RoomieMatch from './modules/roomie_match.js';
-import * as NotesForum from './modules/notes_forum.js';
-import * as TaskManager from './modules/task_manager.js';
+import { initRoommateChat } from './modules/chat.js'; // Added Import
+import * as RoomManager from './modules/room_manager.js'; // Your import
+import * as RoomieMatch from './modules/roomie_match.js'; // Your import
+import * as NotesForum from './modules/notes_forum.js';   // Your import
+import * as TaskManager from './modules/task_manager.js'; // Your import
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Dashboard module loaded.");
+    console.log("Dashboard module loaded. Version: Modular Secure Chat");
 
-    // ============================================================
-    //  CRITICAL FAILSAFE: STUCK ON LOADING WATCHDOG
-    // ============================================================
-    // If the data is still "Loading..." after 0.1 seconds, it means the 
-    // VTOP session is dead (expired), even if the backend is alive.
-    // We must force a logout to generate a fresh session.
+    // Watchdog for slow loads
     setTimeout(() => {
         const scheduleEl = document.getElementById('today-schedule-container');
         const snapshotEl = document.getElementById('snapshot-attendance-perc');
         const userLabel = document.getElementById('sidebar-username');
 
-        // Check for specific "Loading" indicators
         const isScheduleStuck = scheduleEl && (scheduleEl.innerText.toLowerCase().includes('loading') || scheduleEl.innerText.trim() === '');
         const isSnapshotStuck = snapshotEl && snapshotEl.innerText === '...';
         const isUserStuck = userLabel && userLabel.textContent.trim() === 'Loading...';
 
         if (isScheduleStuck || isSnapshotStuck || isUserStuck) {
-            console.warn(">> WATCHDOG: App stuck on loading. VTOP session likely expired. Forcing Reset.");
-
-            // 1. Clear Session
-            localStorage.removeItem('vtop_session_id');
-
-            // 2. Force Reload/Login
-            window.location.href = '/login';
+            console.warn(">> WATCHDOG: App taking long to load. Ensure network connects.");
         }
-    }, 3000); // 5 Seconds Timeout
-    // ============================================================
+    }, 10000); 
 
-    // State for secure directory
-    let decryptedStudentList = []; // Store ALL students here after unlocking
+    // Directory State
+    let decryptedStudentList = [];
     let isDirectoryUnlocked = false;
 
     const elements = {
@@ -67,11 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
         marks: document.getElementById('marks-container'),
         examSchedule: document.getElementById('exam-schedule-container'),
         calendar: document.getElementById('calendar-container'),
-        enrollment: document.getElementById('enrollment-container'),
+        enrollment: document.getElementById('enrollment-container'), 
         profile: document.getElementById('profile-container'),
         calculator: document.getElementById('extra-calculator'),
+        
+        chatContentArea: document.getElementById('chat-content-area'),
 
-        // Secure Directory Elements
         dirPassword: document.getElementById('dir-password'),
         dirTogglePassword: document.getElementById('dir-toggle-password'),
         dirSearch: document.getElementById('dir-search'),
@@ -92,10 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const allDataContainers = [
         elements.todaySchedule, elements.timetable, elements.courses,
         elements.attendance, elements.marks, elements.examSchedule,
-        elements.calendar,
-        elements.enrollment, elements.profile,
+        elements.calendar, elements.enrollment, elements.profile,
         elements.calculator
-    ];
+    ].filter(Boolean);
 
     function closeSidebar() {
         if (window.innerWidth < 768) {
@@ -116,39 +104,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function refreshCurrentPage() {
-        UI.clearAllDataContainers(allDataContainers);
-        const activeNav = document.querySelector('.nav-link.active');
+        try {
+            if (UI && typeof UI.clearAllDataContainers === 'function') {
+                UI.clearAllDataContainers(allDataContainers);
+            } else {
+                allDataContainers.forEach(c => { if (c) c.innerHTML = ''; });
+            }
 
-        if (activeNav && !['academics', 'examinations', 'extra'].includes(activeNav.dataset.section)) {
-            const sectionId = activeNav.dataset.section;
-            if (sectionId === 'dashboard') {
-                // This will now load from cache first, then update
-                Data.fetchTimetableAndCourses(null, null, elements.todaySchedule)
-                    .then(() => Data.fetchAndCalculateAttendanceSnapshot())
-                    .then(() => Data.fetchAndDisplayODSnapshot());
-            } else if (sectionId === 'enrollment') Data.fetchAndDisplay(TARGETS.ENROLLMENT, elements.enrollment, "Course Enrollment");
-            else if (sectionId === 'profile') Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
-        } else {
-            const activeSub = document.querySelector('.nav-link-child.active-subsection');
-            if (activeSub) activeSub.click();
-        }
+            const activeNav = document.querySelector('.nav-link.active');
+
+            if (activeNav && !['academics', 'examinations', 'extra'].includes(activeNav.dataset.section)) {
+                const sectionId = activeNav.dataset.section;
+                
+                if (sectionId === 'dashboard') {
+                    if (Data && typeof Data.fetchTimetableAndCourses === 'function') {
+                        Data.fetchTimetableAndCourses(null, null, elements.todaySchedule)
+                            .then(() => { if (typeof Data.fetchAndCalculateAttendanceSnapshot === 'function') return Data.fetchAndCalculateAttendanceSnapshot(); })
+                            .then(() => { if (typeof Data.fetchAndDisplayODSnapshot === 'function') return Data.fetchAndDisplayODSnapshot(); })
+                            .catch(err => console.error("Dashboard Fetch Chain Failed:", err));
+                    }
+                } else if (sectionId === 'enrollment' && elements.enrollment) {
+                    if (Data && typeof Data.fetchAndDisplay === 'function') Data.fetchAndDisplay(TARGETS.ENROLLMENT, elements.enrollment, "Course Enrollment");
+                } else if (sectionId === 'profile') {
+                    if (Data && typeof Data.fetchAndDisplay === 'function') Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
+                }
+            } else {
+                const activeSub = document.querySelector('.nav-link-child.active-subsection');
+                if (activeSub) activeSub.click();
+            }
+        } catch (error) {}
     }
 
-    // Event Listeners
     document.body.addEventListener('click', (e) => {
         const btn = e.target.closest('.view-attendance-detail');
         if (btn) {
             e.preventDefault(); e.stopPropagation();
-            const { classId, slot } = UI.openAttendanceDetailModal(
-                elements.modal, elements.modalTitle, elements.modalBody,
-                elements.modalContent, btn.dataset.classId, btn.dataset.slot, btn.dataset.courseTitle
-            );
-            Data.fetchAttendanceDetails(classId, slot, elements.modalBody);
+            if (UI && typeof UI.openAttendanceDetailModal === 'function' && Data && typeof Data.fetchAttendanceDetails === 'function') {
+                const { classId, slot } = UI.openAttendanceDetailModal(
+                    elements.modal, elements.modalTitle, elements.modalBody,
+                    elements.modalContent, btn.dataset.classId, btn.dataset.slot, btn.dataset.courseTitle
+                );
+                Data.fetchAttendanceDetails(classId, slot, elements.modalBody);
+            }
         }
     });
 
-    if (elements.modalCloseBtn) elements.modalCloseBtn.addEventListener('click', () => UI.closeModal(elements.modal, elements.modalContent, elements.modalBody));
-    if (elements.modal) elements.modal.addEventListener('click', (e) => { if (e.target === elements.modal) UI.closeModal(elements.modal, elements.modalContent, elements.modalBody); });
+    if (elements.modalCloseBtn) elements.modalCloseBtn.addEventListener('click', () => { if(UI && UI.closeModal) UI.closeModal(elements.modal, elements.modalContent, elements.modalBody); });
+    if (elements.modal) elements.modal.addEventListener('click', (e) => { if (e.target === elements.modal && UI && UI.closeModal) UI.closeModal(elements.modal, elements.modalContent, elements.modalBody); });
 
     if (elements.btnQuickAttendance) elements.btnQuickAttendance.addEventListener('click', (e) => {
         e.preventDefault();
@@ -163,22 +165,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     elements.navLinks.forEach(link => {
         if (['academics', 'examinations', 'extra'].includes(link.dataset.section)) return;
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             e.preventDefault();
-            UI.showPageSection(link.dataset.section, elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
+            if (UI && UI.showPageSection) UI.showPageSection(link.dataset.section, elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
 
             const section = link.dataset.section;
-            if (section === 'enrollment') Data.fetchAndDisplay(TARGETS.ENROLLMENT, elements.enrollment, "Course Enrollment");
-            else if (section === 'profile') Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
+            if (section === 'enrollment' && elements.enrollment && Data && Data.fetchAndDisplay) Data.fetchAndDisplay(TARGETS.ENROLLMENT, elements.enrollment, "Course Enrollment");
+            else if (section === 'profile' && Data && Data.fetchAndDisplay) Data.fetchAndDisplay(TARGETS.PROFILE, elements.profile, "Profile");
+            
+            // --- Handle Chat Request ---
+            if (section === 'chat') {
+                const container = elements.chatContentArea;
+                if (!document.getElementById('chat-container')) {
+                    try {
+                        const response = await fetch('/fetch-chat', { method: 'POST' });
+                        const data = await response.json();
+                        container.innerHTML = data.html_content;
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    } catch (err) {
+                        container.innerHTML = '<p class="text-center p-10 text-red-500">Failed to load chat UI.</p>';
+                        return;
+                    }
+                }
+                initRoommateChat(); // Clean call to our new modular logic
+            }
 
             else if (section === 'find-people') RoomieMatch.initRoomieMatch();
-
-            else if (section === 'notes-forum') {
-                NotesForum.initNotesForum();
-            }
-            else if (section === 'task-hub') {
-                TaskManager.initTaskManager();
-            }
+            else if (section === 'notes-forum') NotesForum.initNotesForum();
+            else if (section === 'task-hub') TaskManager.initTaskManager();
 
             closeSidebar();
             elements.contentContainer.scrollTop = 0;
@@ -191,8 +205,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const parentId = link.dataset.parent;
             const subsectionId = link.dataset.subsection;
 
-            UI.showPageSection(parentId, elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
-            UI.showSubsection(parentId, subsectionId, elements.navLinkChildren);
+            if (UI && UI.showPageSection) UI.showPageSection(parentId, elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
+            if (UI && UI.showSubsection) UI.showSubsection(parentId, subsectionId, elements.navLinkChildren);
 
             if (subsectionId === 'extra-calculator') {
                 elements.calculator.innerHTML = '<div class="p-8 text-center"><i data-lucide="loader" class="animate-spin h-8 w-8 mx-auto text-indigo-500 mb-2"></i><p class="text-gray-500">Opening calculator...</p></div>';
@@ -209,30 +223,23 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (subsectionId === 'examinations-marks') Data.fetchAndDisplay(TARGETS.MARKS, elements.marks, "Marks");
             else if (subsectionId === 'examinations-schedule') Data.fetchAndDisplay(TARGETS.EXAM_SCHEDULE, elements.examSchedule, "Exam Schedule");
             else if (subsectionId === 'hostel-my-room') {
-                RoomManager.populateMyRoomData();
+                            RoomManager.populateMyRoomData();
             }
             else if (subsectionId === 'extra-directory') {
-                // Reset Directory View IF LOCKED
                 if (!isDirectoryUnlocked) {
                     elements.dirPassword.value = '';
                     elements.dirSearch.value = '';
                     elements.dirResults.classList.add('hidden');
                     elements.dirResults.innerHTML = '';
-
-                    // Reset eye icon
                     if (elements.dirTogglePassword) {
                         elements.dirPassword.type = 'password';
                         elements.dirTogglePassword.innerHTML = '<i data-lucide="eye" class="h-5 w-5"></i>';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
-
-                    // Show Lock Screen
                     elements.dirLockScreen.classList.remove('hidden');
                     elements.dirSearchScreen.classList.add('hidden');
-
                     setTimeout(() => elements.dirPassword.focus(), 100);
                 } else {
-                    // Already unlocked, show search
                     elements.dirLockScreen.classList.add('hidden');
                     elements.dirSearchScreen.classList.remove('hidden');
                     setTimeout(() => elements.dirSearch.focus(), 100);
@@ -259,24 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.semesterSelect) {
         elements.semesterSelect.addEventListener('change', () => {
             const val = elements.semesterSelect.value;
-            state.setSemesterId(val);
+            if(state && state.setSemesterId) state.setSemesterId(val);
             localStorage.setItem('vtop_semester_id', val);
             refreshCurrentPage();
         });
     }
 
-if (elements.logoutBtn) {
+    if (elements.logoutBtn) {
         elements.logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             if (navigator.onLine) {
                 try { await fetch(`${API_BASE_URL}/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: localStorage.getItem('vtop_session_id') }) }); } catch (e) { }
             }
-            
-            // 🔥 FIX: Completely wipe all cached data, but save the user's Theme preference
-            const theme = localStorage.getItem('theme');
-            localStorage.clear();
-            if (theme) localStorage.setItem('theme', theme);
-            
+            localStorage.removeItem('vtop_session_id');
             window.location.href = '/login';
         });
     }
@@ -284,36 +286,24 @@ if (elements.logoutBtn) {
     if (elements.calendar) {
         elements.calendar.addEventListener('click', (e) => {
             const navBtn = e.target.closest('.calendar-nav-btn');
-            if (navBtn) Data.fetchAndDisplay(TARGETS.CALENDAR, elements.calendar, "Academic Calendar", { calDate: navBtn.dataset.date });
+            if (navBtn && Data && Data.fetchAndDisplay) Data.fetchAndDisplay(TARGETS.CALENDAR, elements.calendar, "Academic Calendar", { calDate: navBtn.dataset.date });
         });
     }
 
     // --- Directory Logic ---
-
-    // 0. Toggle Password Visibility
     if (elements.dirTogglePassword) {
         elements.dirTogglePassword.addEventListener('click', () => {
             const type = elements.dirPassword.getAttribute('type') === 'password' ? 'text' : 'password';
             elements.dirPassword.setAttribute('type', type);
-
-            // Toggle Icon
-            if (type === 'password') {
-                elements.dirTogglePassword.innerHTML = '<i data-lucide="eye" class="h-5 w-5"></i>';
-            } else {
-                elements.dirTogglePassword.innerHTML = '<i data-lucide="eye-off" class="h-5 w-5"></i>';
-            }
+            elements.dirTogglePassword.innerHTML = type === 'password' ? '<i data-lucide="eye" class="h-5 w-5"></i>' : '<i data-lucide="eye-off" class="h-5 w-5"></i>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
     }
 
-    // 1. Unlock Handler (Downloads & Decrypts EVERYTHING)
     if (elements.dirUnlockBtn) {
         elements.dirUnlockBtn.addEventListener('click', async () => {
             const password = elements.dirPassword.value;
-            if (!password) {
-                alert("Please enter the password.");
-                return;
-            }
+            if (!password) { alert("Please enter the password."); return; }
 
             const originalBtnText = elements.dirUnlockBtn.innerHTML;
             elements.dirUnlockBtn.innerHTML = '<i data-lucide="loader" class="animate-spin w-4 h-4 mr-2"></i> Unlocking & Syncing...';
@@ -321,10 +311,7 @@ if (elements.logoutBtn) {
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
-                // Generate Key
                 const key = CryptoJS.SHA256(password);
-
-                // --- Dynamic Import ---
                 const { initializeApp } = await import('https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js');
                 const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js');
 
@@ -334,96 +321,53 @@ if (elements.logoutBtn) {
                     projectId: "vitc29",
                     storageBucket: "vitc29.firebasestorage.app",
                     messagingSenderId: "376204861458",
-                    appId: "1:376204861458:web:5dc7fdaa74f2650911f8cb",
-                    measurementId: "G-733GMSBTQQ"
+                    appId: "1:376204861458:web:5dc7fdaa74f2650911f8cb"
                 };
 
                 const app = initializeApp(firebaseConfig);
                 const db = getFirestore(app);
 
-                // 1. Fetch ALL documents
-                console.log("DEBUG: Attempting to fetch encrypted database from Firestore...");
-
-                let querySnapshot;
-                try {
-                    querySnapshot = await getDocs(collection(db, "encrypted_students"));
-                } catch (fetchError) {
-                    console.error("DEBUG: FETCH FAILED. Details:", fetchError);
-                    let errMsg = "Database Unreachable.";
-                    if (fetchError.code === 'permission-denied') errMsg += " (Access Denied)";
-                    if (fetchError.code === 'unavailable') errMsg += " (Network Error)";
-                    throw new Error(errMsg);
-                }
-
+                let querySnapshot = await getDocs(collection(db, "encrypted_students"));
                 decryptedStudentList = [];
-                let decryptionFailedCount = 0;
                 let successCount = 0;
-                let totalDocs = querySnapshot.size;
 
-                console.log(`DEBUG: Fetch Success. Records found: ${totalDocs}`);
-
-                if (totalDocs === 0) {
-                    alert("Database is empty. Please upload data first.");
-                    elements.dirUnlockBtn.innerHTML = originalBtnText;
-                    elements.dirUnlockBtn.disabled = false;
-                    return;
-                }
-
-                // 2. Decrypt ALL documents locally
-                console.log("DEBUG: Starting Decryption...");
                 querySnapshot.forEach((doc) => {
                     try {
                         const data = doc.data();
-                        // Decrypt
                         const decrypted = CryptoJS.AES.decrypt(data.blob, key, { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 });
                         const jsonString = decrypted.toString(CryptoJS.enc.Utf8);
-
                         if (jsonString && jsonString.startsWith('{')) {
                             const student = JSON.parse(jsonString);
-                            // Normalize data for easier search later
                             student._searchStr = `${student.Name} ${student.RegNo} ${student.Mail} ${student.Mobile}`.toLowerCase();
                             decryptedStudentList.push(student);
                             successCount++;
-                        } else {
-                            decryptionFailedCount++;
                         }
-                    } catch (e) {
-                        decryptionFailedCount++;
-                    }
+                    } catch (e) { }
                 });
 
-                console.log(`DEBUG: Decryption Complete. Success: ${successCount}, Failures: ${decryptionFailedCount}`);
-
                 if (successCount === 0) {
-                    // If everything failed, it's definitely the wrong password
                     alert("Unlock Failed: Incorrect Password.");
                     elements.dirUnlockBtn.innerHTML = originalBtnText;
                     elements.dirUnlockBtn.disabled = false;
                     return;
                 }
 
-                // Success! Switch UI
                 isDirectoryUnlocked = true;
                 elements.dirLockScreen.classList.add('hidden');
                 elements.dirSearchScreen.classList.remove('hidden');
-                elements.dirPassword.value = ''; // Clear sensitive data from UI input
-
-                // Focus Search
+                elements.dirPassword.value = '';
                 setTimeout(() => elements.dirSearch.focus(), 100);
-
             } catch (error) {
-                console.error("DEBUG: Overall Process Error:", error);
-                alert(error.message || "Failed to connect or download database.");
+                alert(error.message || "Failed to connect database.");
                 elements.dirUnlockBtn.innerHTML = originalBtnText;
                 elements.dirUnlockBtn.disabled = false;
             }
         });
     }
 
-    // 2. Lock Handler (Clears Memory)
     if (elements.dirLockBtn) {
         elements.dirLockBtn.addEventListener('click', () => {
-            decryptedStudentList = []; // WIPEOUT MEMORY
+            decryptedStudentList = [];
             isDirectoryUnlocked = false;
 
             elements.dirLockScreen.classList.remove('hidden');
@@ -436,11 +380,9 @@ if (elements.logoutBtn) {
         });
     }
 
-    // 3. Instant Search (Filter Local Array)
     if (elements.dirSearch) {
         elements.dirSearch.addEventListener('input', (e) => {
             if (!isDirectoryUnlocked) return;
-
             const term = e.target.value.toLowerCase().trim();
             const resultsContainer = elements.dirResults;
 
@@ -450,9 +392,7 @@ if (elements.logoutBtn) {
                 return;
             }
 
-            // Filter in memory (Fast!)
-            const matches = decryptedStudentList.filter(s => s._searchStr.includes(term)).slice(0, 10); // Limit to top 10
-
+            const matches = decryptedStudentList.filter(s => s._searchStr.includes(term)).slice(0, 10);
             resultsContainer.innerHTML = '';
 
             if (matches.length === 0) {
@@ -460,7 +400,6 @@ if (elements.logoutBtn) {
             } else {
                 matches.forEach(student => {
                     const card = document.createElement('div');
-                    // Style updated for solid/white look
                     card.className = 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group';
                     card.innerHTML = `
                         <div class="flex justify-between items-center">
@@ -472,8 +411,6 @@ if (elements.logoutBtn) {
                                 <i data-lucide="chevron-down" class="w-5 h-5"></i>
                             </div>
                         </div>
-                        
-                        <!-- Hidden Details -->
                         <div class="hidden mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm space-y-2">
                             <div class="flex items-center text-gray-700 dark:text-gray-300">
                                 <i data-lucide="mail" class="w-4 h-4 mr-2 text-gray-400"></i>
@@ -485,12 +422,9 @@ if (elements.logoutBtn) {
                             </div>
                         </div>
                     `;
-
-                    // Add click handler for expansion
                     card.addEventListener('click', function () {
-                        const details = this.querySelector('.hidden, .block'); // Select either state
+                        const details = this.querySelector('.hidden, .block');
                         const chevron = this.querySelector('.chevron-icon');
-
                         if (details.classList.contains('hidden')) {
                             details.classList.remove('hidden');
                             details.classList.add('block');
@@ -502,7 +436,6 @@ if (elements.logoutBtn) {
                         }
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     });
-
                     resultsContainer.appendChild(card);
                 });
             }
@@ -511,89 +444,50 @@ if (elements.logoutBtn) {
         });
     }
 
-    // 4. Manual Search Button (Optional now, but kept for UX)
-    if (elements.dirSearchBtn) {
-        elements.dirSearchBtn.addEventListener('click', () => {
-            elements.dirSearch.dispatchEvent(new Event('input'));
-        });
-    }
-
-    window.unlockCredentials = async function () {
-        const passwordInput = document.getElementById('creds-password-input');
-        const unlockBtn = document.getElementById('creds-unlock-btn');
-        const errorMsg = document.getElementById('creds-error');
-        const lockedView = document.getElementById('creds-locked');
-        const contentView = document.getElementById('creds-content');
-
-        const password = passwordInput.value;
-        if (!password) { errorMsg.textContent = "Please enter your password."; errorMsg.classList.remove('hidden'); return; }
-
-        const originalBtnText = unlockBtn.innerHTML;
-        unlockBtn.innerHTML = '<i data-lucide="loader" class="animate-spin w-4 h-4 mr-2"></i> Verifying...';
-        unlockBtn.disabled = true;
-        errorMsg.classList.add('hidden');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-
-        try {
-            const response = await fetch(`${window.location.origin}/fetch-profile-credentials`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: localStorage.getItem('vtop_session_id'), password: password })
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                contentView.innerHTML = data.html_content;
-                lockedView.style.opacity = '0';
-                setTimeout(() => { lockedView.classList.add('hidden'); contentView.classList.remove('hidden'); }, 300);
-            } else {
-                errorMsg.textContent = data.message || "Verification failed.";
-                errorMsg.classList.remove('hidden');
-                unlockBtn.innerHTML = originalBtnText;
-                unlockBtn.disabled = false;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        } catch (error) {
-            console.error(error);
-            errorMsg.textContent = "Network error. Please try again.";
-            errorMsg.classList.remove('hidden');
-            unlockBtn.innerHTML = originalBtnText;
-            unlockBtn.disabled = false;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-    };
-
-    // --- Init ---
-
-    function startOfflineMode() {
-        console.log("Starting offline/fallback mode.");
+    // ============================================================
+    // --- System Init & Checks ---
+    // ============================================================
+    
+    function loadCachedData() {
         const cachedName = localStorage.getItem('vtop_username_cache');
         const cachedRegNo = localStorage.getItem('vtop_regno_cache');
 
         if (elements.sidebarUsername) elements.sidebarUsername.textContent = cachedName || 'User';
-        if (elements.sidebarRegNo) elements.sidebarRegNo.textContent = cachedRegNo || 'Offline';
+        if (elements.sidebarRegNo) elements.sidebarRegNo.textContent = cachedRegNo || 'Checking Session...';
 
         const savedSemId = localStorage.getItem('vtop_semester_id');
         if (savedSemId) {
-            state.setSemesterId(savedSemId);
+            if(state && state.setSemesterId) state.setSemesterId(savedSemId);
             elements.semesterSelect.innerHTML = `<option value="${savedSemId}" selected>Saved Semester</option>`;
         } else {
             elements.semesterSelect.innerHTML = `<option disabled>No semester saved</option>`;
         }
+        
         refreshCurrentPage();
     }
 
-    async function checkSession() {
+    async function checkSessionAndFetchLatest() {
         const savedSessionId = localStorage.getItem('vtop_session_id');
-        if (!savedSessionId) { window.location.href = '/login'; return; }
+        
+        if (!savedSessionId) { 
+            window.location.href = '/login'; 
+            return; 
+        }
 
-        if (!navigator.onLine) { startOfflineMode(); return; }
+        if (!navigator.onLine) { return; }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/check-session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: savedSessionId }) });
-            if (!response.ok) throw new Error("Session check failed");
+            const response = await fetch(`${API_BASE_URL}/check-session`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ session_id: savedSessionId }) 
+            });
+            
+            if (!response.ok) throw new Error("Session check network failed");
             const data = await response.json();
+            
             if (data.status === 'success') {
-                const userName = data.username || 'User';
+                const userName = data.username || localStorage.getItem('vtop_username_cache') || 'User';
                 const regStatus = 'Session Active';
 
                 if (elements.sidebarUsername) elements.sidebarUsername.textContent = userName;
@@ -602,25 +496,33 @@ if (elements.logoutBtn) {
                 localStorage.setItem('vtop_username_cache', userName);
                 localStorage.setItem('vtop_regno_cache', regStatus);
 
-                populateSemesterDropdown();
+                await populateSemesterDropdown(true); 
             } else {
                 localStorage.removeItem('vtop_session_id');
                 window.location.href = '/login';
             }
         } catch (error) {
-            startOfflineMode();
+            if (elements.sidebarRegNo) elements.sidebarRegNo.textContent = 'Offline Mode';
         }
     }
 
-    async function populateSemesterDropdown() {
+    async function populateSemesterDropdown(triggerRefresh = false) {
         try {
-            const response = await fetch(`${API_BASE_URL}/get-semesters`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: localStorage.getItem('vtop_session_id') }) });
+            const response = await fetch(`${API_BASE_URL}/get-semesters`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ session_id: localStorage.getItem('vtop_session_id') }) 
+            });
             const data = await response.json();
-            if (data.status === 'success' && data.semesters.length > 0) {
+            
+            if (data.status === 'success' && data.semesters && data.semesters.length > 0) {
                 elements.semesterSelect.innerHTML = '';
                 const savedSemId = localStorage.getItem('vtop_semester_id');
                 let selectedId = data.semesters[0].id;
-                if (savedSemId && data.semesters.some(s => s.id === savedSemId)) selectedId = savedSemId;
+                
+                if (savedSemId && data.semesters.some(s => s.id === savedSemId)) {
+                    selectedId = savedSemId;
+                }
 
                 data.semesters.forEach(s => {
                     const opt = document.createElement('option');
@@ -629,31 +531,21 @@ if (elements.logoutBtn) {
                     if (s.id === selectedId) opt.selected = true;
                     elements.semesterSelect.appendChild(opt);
                 });
-                state.setSemesterId(selectedId);
+                
+                if(state && state.setSemesterId) state.setSemesterId(selectedId);
                 localStorage.setItem('vtop_semester_id', selectedId);
-                refreshCurrentPage();
             }
         } catch (error) {
-            const savedSemId = localStorage.getItem('vtop_semester_id');
-            if (savedSemId) {
-                state.setSemesterId(savedSemId);
-                elements.semesterSelect.innerHTML = `<option value="${savedSemId}" selected>Saved Semester</option>`;
+        } finally {
+            if (triggerRefresh) {
                 refreshCurrentPage();
             }
         }
     }
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    UI.showPageSection('dashboard', elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
-    checkSession();
-
-    // --- CRITICAL PWA UPDATE ---
-    // Register SW at ROOT scope so it controls everything including / and /login
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-            .register('/sw.js') // Point to the new root route in app.py
-            .then(() => { console.log('Service Worker Registered at root scope'); })
-            .catch(err => console.error('SW Registration failed:', err));
-    }
-
+    if (UI && UI.showPageSection) UI.showPageSection('dashboard', elements.pageSections, elements.navLinks, elements.academicsToggle, elements.examinationsToggle, elements.extraToggle);
+    
+    loadCachedData();
+    checkSessionAndFetchLatest();
 });
