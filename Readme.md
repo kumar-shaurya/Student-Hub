@@ -1,4 +1,4 @@
-# 📘 VTOP-C  
+# 📘 Student-Hub
 ### Smart Student Life & Academic Management Platform
 
 > A centralized student ecosystem integrating academics, collaboration, hostel life, and productivity into one unified dashboard.
